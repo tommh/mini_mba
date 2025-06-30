@@ -44,7 +44,8 @@ if __name__ == "__main__":
     # Read recipe text from file
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    recipe_path = os.path.join(script_dir, "mac_and_cheese_recipe.txt")
+    recipe_path = os.path.join(
+        script_dir, "recipe_ingredients", "mac_and_cheese_recipe.txt")
     with open(recipe_path, "r") as file:
         recipe_text = file.read()
 
