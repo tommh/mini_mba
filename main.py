@@ -5,8 +5,10 @@ from typing import List
 from pprint import pprint
 from tabulate import tabulate
 
+
 import os
 import PyPDF2
+import requests
 
 
 load_dotenv()  # Load variables from .env
@@ -111,6 +113,8 @@ if __name__ == "__main__":
             if page.extract_text()
         )
 
+    print(recipe_text[:1000])
+
     # Get structured recipe
     recipe = get_recipe_from_text(recipe_text)
 
@@ -118,7 +122,7 @@ if __name__ == "__main__":
     # pprint(recipe.ingredients[0])
     # pprint(recipe)  # to see the whole object
 
-# Pretty print ingredients as table
-ingredient_table = [[i.amount, i.unit, i.name] for i in recipe.ingredients]
-print(tabulate(ingredient_table, headers=[
-      "Amount", "Unit", "Ingredient"], tablefmt="grid"))
+    # Pretty print ingredients as table
+    ingredient_table = [[i.amount, i.unit, i.name] for i in recipe.ingredients]
+    print(tabulate(ingredient_table, headers=[
+        "Amount", "Unit", "Ingredient"], tablefmt="grid"))

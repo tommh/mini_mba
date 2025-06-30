@@ -1,0 +1,99 @@
+from openai import OpenAI
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import List
+from pprint import pprint
+from tabulate import tabulate
+from bs4 import BeautifulSoup
+
+import os
+import requests
+import urllib3
+
+load_dotenv()  # Load variables from .env
+
+
+class Ingredient(BaseModel):
+    """
+    Represents a single ingredient with amount, unit, and name.
+    """
+    amount: float = Field(description="Quantity of the ingredient")
+    unit: str = Field(description="Unit of measurement (e.g., cups, grams)")
+    name: str = Field(description="Name of the ingredient in Norwegian")
+    english_name: str = Field(description="Name of the ingredient in english")
+
+
+class Recipe(BaseModel):
+    """
+    Use this model when working with complete cooking recipes.
+    """
+    title: str = Field(description="Name of the recipe")
+    ingredients: List[Ingredient] = Field(
+        description="List of ingredients needed for the recipe")
+    instructions: List[str] = Field(
+        description="Step-by-step instructions to prepare the recipe")
+
+
+def get_recipe_from_text(recipe_text: str) -> Recipe:
+    """
+    Convert recipe text into a structured Recipe object using OpenAI.
+    """
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    # Build prompt
+    prompt = {
+        "role": "user",
+        "content": f"""
+Dette er en matoppskrift på norsk hentet fra en nettside. Den kan være litt ustrukturert eller inneholde støy. Ønsker at svaret skal være for 2 personer når det gjelder mengder.
+Konverter den til dette strukturerte formatet (norsk):
+
+- title: string
+- ingredients: list of Ingredient (amount, unit, name, english_name
+- instructions: list of steps
+
+Her er teksten:
+{recipe_text}
+"""
+    }
+
+    # Make the API call
+    response = client.responses.parse(
+        model="gpt-4o-mini-2024-07-18",
+        input=[prompt],
+        text_format=Recipe
+    )
+
+    return response.output_parsed
+
+
+if __name__ == "__main__":
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # Read recipe text from URL
+    url = "https://www.matprat.no/oppskrifter/gjester/schnitzel-av-svinekam-med-asparges/"
+    response = requests.get(url, verify=False)
+    html_text = response.text
+
+    soup = BeautifulSoup(html_text, "html.parser")
+    recipe_text = soup.get_text(separator="\n", strip=True)
+
+    # print(recipe_text[:1000])  # ✅ Preview the cleaned recipe text
+
+    # Get structured recipe
+    recipe = get_recipe_from_text(recipe_text)
+
+    # Print results
+    # pprint(recipe.ingredients[0])
+    # pprint(recipe)  # to see the whole object
+
+    print("\nOppskrift:", recipe.title)
+    print("\nFremgangsmåte:")
+    for i, step in enumerate(recipe.instructions, 1):
+        print(f"{i}. {step}")
+
+    # Pretty print ingredients as table
+    ingredient_table = [[i.amount, i.unit, i.name, i.english_name]
+                        for i in recipe.ingredients]
+    print(tabulate(ingredient_table, headers=[
+        "Amount", "Unit", "Ingredient", "English"], tablefmt="grid"))
